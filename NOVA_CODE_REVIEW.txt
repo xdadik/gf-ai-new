@@ -1,0 +1,133 @@
+================================================================================
+  NOVA BOT - FULL CODE REVIEW REPORT
+  Generated: 2026-03-22
+================================================================================
+
+OVERVIEW
+--------
+Nova Bot is a Telegram AI bot with a FastAPI web dashboard. It connects to a
+local Ollama LLM instance for chat, and provides a rich set of PC control tools,
+news, currency exchange, and fun skills via handler dispatch.
+
+================================================================================
+STATUS: ALL PYTHON FILES COMPILE CLEANLY ✅
+================================================================================
+
+
+BUGS FIXED IN THIS REVIEW SESSION
+-----------------------------------
+
+1. [CRITICAL] nova_bot.py – handle_text crash on every message
+   FILE: nova_bot.py  LINE: ~631
+   ERROR: "async with update.effective_chat.send_action(...)" – send_action
+          is a coroutine, NOT an async context manager.
+          This crashed the bot any time users sent text messages.
+   FIX:  Changed to "await update.effective_chat.send_action(ChatAction.TYPING)"
+
+2. [CRITICAL] nova_bot.py – button_callback crash on tool approval
+   FILE: nova_bot.py  LINE: ~737
+   ERROR: Same async context manager mistake as above, but in the tool-approval
+          callback handler. Bot crashed whenever a user approved a tool action.
+   FIX:  Changed to "await placeholder.chat.send_action(ChatAction.TYPING)"
+
+3. [MODERATE] db.py – Missing get_personality / set_personality methods
+   FILE: db.py
+   ERROR: dashboard.py called db_store.get_personality() and set_personality()
+          which did not exist in the ConversationStore class. Would crash the
+          /api/personalities/user/{id} API endpoint.
+   FIX:  Added get_personality() and set_personality() using UPSERT SQL.
+
+4. [MODERATE] dashboard.py – Blocking async event loop
+   FILE: dashboard.py  LINE: ~82
+   ERROR: psutil.cpu_percent(interval=0.5) blocks the FastAPI async event loop
+          for 0.5 seconds on EVERY websocket ping (every 2 seconds). This causes
+          the dashboard to lag and misses events.
+   FIX:  Changed interval to None for instant non-blocking reading.
+
+5. [MODERATE] pc_control.py – get_system_stats blocks the event loop
+   FILE: pc_control.py  LINE: ~357 (called via asyncio.to_thread)
+   ERROR: psutil.cpu_percent(interval=1) sleeps the thread for 1 whole second
+          every time stats are fetched, cutting into the async thread pool.
+   FIX:  Changed interval to None.
+
+6. [MINOR] pc_control.py – Mid-file duplicate json import
+   FILE: pc_control.py  LINE: ~568
+   ERROR: "import json" appeared mid-file instead of at the top with other imports.
+          This is redundant since json was already used earlier without being
+          imported at the top.
+   FIX:  Moved json import to the top of the file with other imports.
+
+7. [MINOR] Unused scratch file
+   FILE: used.txt
+   ERROR: A temporary scratch file left in the project root from a previous
+          debugging session.
+   FIX:  Deleted.
+
+
+================================================================================
+OPENCLAW-MAIN FOLDER
+================================================================================
+This is the open-source "OpenClaw" JavaScript project – it is NOT a dependency
+of Nova Bot and is completely unrelated. It is safe to leave it in place or move
+it elsewhere. No changes were made to any files inside openclaw-main/.
+
+
+================================================================================
+SKILLS STATUS ✅
+================================================================================
+All Nova skills route correctly through this chain:
+  nova_bot.py (execute_tool_call)
+     → pc_control.py (wrapper function, e.g. get_joke)
+     → skills_module.py (async functions via asyncio.run)
+     → NovaSkills class methods
+
+Verified skills working:
+- tell_joke / get_joke
+- get_quote / get_inspirational_quote
+- get_fun_fact / get_random_fact
+- calculate / do_calculation
+- roll_dice / roll_the_dice
+- flip_coin / flip_the_coin
+- generate_password / create_password
+- play_rps / play_rock_paper_scissors
+- analyze_sentiment / analyze_mood
+
+News tools → news_module.py  (requires feedparser / NewsAPI key in .env)
+Exchange tools → exchange_module.py (requires EXCHANGE_API_KEY in .env)
+
+
+================================================================================
+API / CONNECTION HEALTH
+================================================================================
+Telegram Bot: Connects via python-telegram-bot library using token in .env
+Ollama LLM:   Connects to OLLAMA_BASE_URL (default http://localhost:11434)
+Dashboard:    FastAPI at http://localhost:8000 with WebSocket at /ws
+SQLite DB:    nova.sqlite3 (conversation history + user settings)
+
+Required .env keys:
+  TELEGRAM_BOT_TOKEN=   (required)
+  OLLAMA_BASE_URL=      (optional, default localhost:11434)
+  OLLAMA_MODEL=         (optional, default llama3.2)
+  NEWS_API_KEY=         (optional, for News API support)
+  EXCHANGE_API_KEY=     (optional, for exchange rate support)
+  OPENWEATHER_API_KEY=  (optional, for weather commands)
+  AUTHORIZED_USER_IDS=  (optional, restrict bot to specific Telegram user IDs)
+
+
+================================================================================
+HOW TO START
+================================================================================
+  python run_with_dashboard.py
+
+This starts both the dashboard (port 8000) and the Telegram bot.
+
+NOTE: Make sure no other Python bot instances are running before launching.
+If you see "Conflict: terminated by other getUpdates request", run:
+  Get-Process python | Stop-Process -Force
+Then restart with:
+  python run_with_dashboard.py
+
+
+================================================================================
+END OF REPORT
+================================================================================

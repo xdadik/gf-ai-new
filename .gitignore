@@ -1,0 +1,36 @@
+# Environments
+.env
+.env.local
+.env.*.local
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs
+*.log
+nova.log
+
+# Databases and Memory
+*.sqlite3
+nova.sqlite3
+*.json
+memory.json
+user_facts.json
+user_profile.json
+plugins_data_*.json
+
+# Security and Keys
+*.pem
+*.key
+*.cert
+
+# IDEs
+.vs/
+.vscode/
+.idea/
+
+# OS specific
+.DS_Store
+Thumbs.db
