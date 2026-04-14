@@ -1,24 +1,48 @@
+# Core Telegram Bot
 python-telegram-bot>=20.0
-APScheduler
-openai-whisper
-python-dotenv
-psutil
-requests
-aiohttp
-aiosqlite
-ffmpeg-python
-torch
-numpy
-fastapi
-uvicorn
-jinja2
-pyautogui
-pyperclip
-beautifulsoup4
-cryptography
-pyzipper
-feedparser
-pyshorteners
-textblob
-geopy
+APScheduler>=3.10.0
+
+# AI/ML
+openai-whisper>=20230314
+torch>=2.0.0
+numpy>=1.24.0
+
+# Configuration & Environment
+python-dotenv>=1.0.0
+
+# System Monitoring & Control
+psutil>=5.9.0
+pyautogui>=0.9.54
+pyperclip>=1.8.0
+
+# HTTP & Async
+aiohttp>=3.9.0
+requests>=2.31.0
 websockets>=12.0
+
+# Database
+aiosqlite>=0.19.0
+
+# Web Dashboard
+fastapi>=0.109.0
+uvicorn>=0.27.0
+jinja2>=3.1.0
+
+# Media & File Processing
+ffmpeg-python>=0.2.0
+
+# Web Scraping & Parsing
+beautifulsoup4>=4.12.0
+feedparser>=6.0.0
+
+# Security & Encryption
+cryptography>=42.0.0
+pyzipper>=0.3.6
+
+# Utilities
+pyshorteners>=1.0.1
+textblob>=0.17.1
+geopy>=2.4.0
+
+# MCP (Model Context Protocol) Support
+# Note: MCP is implemented natively in the bot's tool system

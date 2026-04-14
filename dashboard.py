@@ -25,7 +25,7 @@ bot_state: Dict[str, Any] = {  # type: ignore  # pyre-ignore
     "user_memory": {},
     "conversation_logs": {},
     "user_personalities": {},
-    "log_file": SETTINGS.nova_log_file,
+    "log_file": SETTINGS.lily_log_file,
 }
 
 app = FastAPI(title="Lily Bot Dashboard")

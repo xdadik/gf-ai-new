@@ -1,36 +1,38 @@
-# Environments
+```
+# Environment variables
 .env
 .env.local
-.env.*.local
+.env.*
 
-# Byte-compiled / optimized / DLL files
+# Dependencies
+venv/
+.venv/
 __pycache__/
-*.py[cod]
-*$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
 
 # Logs
 *.log
-nova.log
 
-# Databases and Memory
-*.sqlite3
-nova.sqlite3
-*.json
-memory.json
-user_facts.json
-user_profile.json
-plugins_data_*.json
-
-# Security and Keys
-*.pem
-*.key
-*.cert
-
-# IDEs
-.vs/
+# Editor/IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*.tmp
 
-# OS specific
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# OS
 .DS_Store
 Thumbs.db
+```

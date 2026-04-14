@@ -109,7 +109,7 @@ def run_bot() -> None:  # type: ignore  # pyre-ignore
         logger.error("TELEGRAM_BOT_TOKEN is not set. Bot will not start; dashboard will keep running.")
         return
 
-    from nova_bot import main as bot_main  # type: ignore  # pyre-ignore
+    from lily_bot import main as bot_main  # type: ignore  # pyre-ignore
 
     bot_main()
 
