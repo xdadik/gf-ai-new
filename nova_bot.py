@@ -1,28 +1,27 @@
-# pyre-ignore-all-errors
-import asyncio  # type: ignore  # pyre-ignore
-import glob  # type: ignore  # pyre-ignore
-import importlib  # type: ignore  # pyre-ignore
-import json  # type: ignore  # pyre-ignore
-import logging  # type: ignore  # pyre-ignore
-# pyre-ignore-all-errors
-import os  # type: ignore  # pyre-ignore
-import re  # type: ignore  # pyre-ignore
-import secrets  # type: ignore  # pyre-ignore
-import shutil  # type: ignore  # pyre-ignore
-import sys  # type: ignore  # pyre-ignore
-import tempfile  # type: ignore  # pyre-ignore
-import time  # type: ignore  # pyre-ignore
-from datetime import datetime, timedelta  # type: ignore  # pyre-ignore
-from pathlib import Path  # type: ignore  # pyre-ignore
-from typing import Any, Optional  # type: ignore  # pyre-ignore
+import asyncio
+import glob
+import importlib
+import json
+import logging
+import os
+import re
+import secrets
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Optional
 
-import aiohttp  # type: ignore  # pyre-ignore
-import whisper  # type: ignore  # pyre-ignore
-from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore  # pyre-ignore
-from telegram import InputFile, InlineKeyboardButton, InlineKeyboardMarkup, Update  # type: ignore  # pyre-ignore
-from telegram.constants import ChatAction  # type: ignore  # pyre-ignore
-from telegram.error import BadRequest  # type: ignore  # pyre-ignore
-from telegram.ext import (  # type: ignore  # pyre-ignore
+import aiohttp
+import whisper
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from telegram import InputFile, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.constants import ChatAction
+from telegram.error import BadRequest
+from telegram.ext import (
     Application,
     ApplicationHandlerStop,
     CallbackQueryHandler,
@@ -32,32 +31,29 @@ from telegram.ext import (  # type: ignore  # pyre-ignore
     filters,
 )
 
-import pc_control  # type: ignore  # pyre-ignore
-from config import SETTINGS  # type: ignore  # pyre-ignore
-from db import ConversationStore  # type: ignore  # pyre-ignore
-from ollama_client import OllamaClient  # type: ignore  # pyre-ignore
-from personalities import PERSONALITIES, format_personality_list, get_personality  # type: ignore  # pyre-ignore
+import pc_control
+from config import SETTINGS
+from db import ConversationStore
+from ollama_client import OllamaClient
+from personalities import PERSONALITIES, format_personality_list, get_personality
 
 try:
-    import pyzipper  # type: ignore  # pyre-ignore
+    import pyzipper
 except Exception:
     pyzipper = None
 
-
 try:
-    from dashboard import bot_state, log_conversation, update_user_memory  # type: ignore  # type: ignore  # pyre-ignore
-
+    from dashboard import bot_state, log_conversation, update_user_memory
     DASHBOARD_AVAILABLE = True
 except Exception:
     DASHBOARD_AVAILABLE = False
     bot_state = {"running": True}
 
-    def log_conversation(*_args, **_kwargs):  # type: ignore
+    def log_conversation(*_args, **_kwargs):
         return
 
-    def update_user_memory(*_args, **_kwargs):  # type: ignore
+    def update_user_memory(*_args, **_kwargs):
         return
-
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -66,47 +62,46 @@ logging.basicConfig(
 )
 logger = logging.getLogger("LilyBot")
 
-
 scheduler = AsyncIOScheduler()
 try:
     whisper_model = whisper.load_model("base")
 except Exception:
     whisper_model = None
 bot_instance = None
-_processed_update_ids: set[int] = set()  # dedup guard  # type: ignore  # pyre-ignore
+_processed_update_ids: set[int] = set()
 
 # ── Memory / Notes folder ────────────────────────────────────────────────────
 NOTE_DIR = Path("nova_memory")
 NOTE_DIR.mkdir(exist_ok=True)
 
-def _user_note_path(user_id: int) -> Path:  # type: ignore  # pyre-ignore
+def _user_note_path(user_id: int) -> Path:
     return NOTE_DIR / f"{user_id}_notes.txt"
 
-def _append_note(user_id: int, note: str) -> None:  # type: ignore  # pyre-ignore
+def _append_note(user_id: int, note: str) -> None:
     try:
         with _user_note_path(user_id).open("a", encoding="utf-8") as f:
-            f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] {note}\n")  # type: ignore  # pyre-ignore
+            f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] {note}\n")
     except Exception:
         pass
 
-def _read_notes(user_id: int) -> str:  # type: ignore  # pyre-ignore
+def _read_notes(user_id: int) -> str:
     try:
         path = _user_note_path(user_id)
         if path.exists():
             lines = path.read_text(encoding="utf-8").strip().splitlines()
-            lines_list: list[str] = list(lines)  # type: ignore  # pyre-ignore
+            lines_list: list[str] = list(lines)
             start: int = max(0, len(lines_list) - 40)
-            return "\n".join(lines_list[start:len(lines_list)])  # type: ignore  # pyre-ignore
+            return "\n".join(lines_list[start:len(lines_list)])
     except Exception:
         pass
     return ""
 
 
-active_plugins: dict[str, str] = {}  # type: ignore  # pyre-ignore
-plugin_handlers: list[Any] = []  # type: ignore  # pyre-ignore
+active_plugins: dict[str, str] = {}
+plugin_handlers: list[Any] = []
 
 
-def load_plugins(application: Application) -> None:  # type: ignore  # pyre-ignore
+def load_plugins(application: Application) -> None:
     global active_plugins, plugin_handlers
 
     for handler in plugin_handlers:
@@ -123,7 +118,7 @@ def load_plugins(application: Application) -> None:  # type: ignore  # pyre-igno
         sys.path.insert(0, plugins_dir)
 
     for file_path in glob.glob(os.path.join(plugins_dir, "*.py")):
-        module_name = os.path.basename(file_path)[:-3]  # type: ignore  # pyre-ignore
+        module_name = os.path.basename(file_path)[:-3]
         try:
             if module_name in sys.modules:
                 module = importlib.reload(sys.modules[module_name])
@@ -146,13 +141,13 @@ def load_plugins(application: Application) -> None:  # type: ignore  # pyre-igno
             logger.error(f"Failed to load plugin {module_name}: {e}")
 
 
-def is_authorized(user_id: int) -> bool:  # type: ignore  # pyre-ignore
+def is_authorized(user_id: int) -> bool:
     if not SETTINGS.authorized_user_ids:
         return True
     return user_id in SETTINGS.authorized_user_ids
 
 
-async def ensure_authorized(update: Update) -> bool:  # type: ignore  # pyre-ignore
+async def ensure_authorized(update: Update) -> bool:
     user = update.effective_user
     if not user or not is_authorized(user.id):
         if update.callback_query:
@@ -163,7 +158,7 @@ async def ensure_authorized(update: Update) -> bool:  # type: ignore  # pyre-ign
     return True
 
 
-async def auth_message_gate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:  # type: ignore  # pyre-ignore
+async def auth_message_gate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not user or not is_authorized(user.id):
         if update.effective_message:
@@ -171,7 +166,7 @@ async def auth_message_gate(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         raise ApplicationHandlerStop
 
 
-async def auth_callback_gate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:  # type: ignore  # pyre-ignore
+async def auth_callback_gate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not user or not is_authorized(user.id):
         if update.callback_query:
@@ -192,7 +187,7 @@ CRITICAL: Do not say "Sure!", "Let me check...", or ANY conversational text befo
 <tool_call>{"name": "the_tool_name", "arguments": {"arg_name": "value"}}</tool_call>
 
 6. If multiple actions are needed, batch them in one tag:
-<tool_call>{"name": "batch_tools", "arguments": {"calls": [{"name": "tool_a", "arguments": {}}, {"name": "tool_b", "arguments": {}}]}}</tool_call>  # type: ignore  # pyre-ignore
+<tool_call>{"name": "batch_tools", "arguments": {"calls": [{"name": "tool_a", "arguments": {}}, {"name": "tool_b", "arguments": {}}]}}</tool_call>
 Available tools:
 - {"name": "take_screenshot"}
 - {"name": "get_clipboard"}
@@ -270,7 +265,7 @@ MEMORY RULES:
 """.strip()
 
 
-async def execute_tool_call(tool_call: dict, user_id: int) -> str:  # type: ignore  # pyre-ignore
+async def execute_tool_call(tool_call: dict, user_id: int) -> str:
     name = tool_call.get("name")
     args = tool_call.get("arguments", {}) or {}
     if not isinstance(args, dict):
@@ -282,9 +277,9 @@ async def execute_tool_call(tool_call: dict, user_id: int) -> str:  # type: igno
             calls = args.get("calls", [])
             if not isinstance(calls, list):
                 return "I couldn't run the batch action format. Please try again."
-            outputs: list[str] = []  # type: ignore  # pyre-ignore
-            calls_list: list[dict] = [c for c in calls if isinstance(c, dict)]  # type: ignore  # pyre-ignore
-            capped = calls_list[0:min(5, len(calls_list))]  # type: ignore  # pyre-ignore
+            outputs: list[str] = []
+            calls_list: list[dict] = [c for c in calls if isinstance(c, dict)]
+            capped = calls_list[0:min(5, len(calls_list))]
             for idx, call in enumerate(capped, start=1):
                 if not isinstance(call, dict):
                     continue
@@ -376,24 +371,24 @@ async def execute_tool_call(tool_call: dict, user_id: int) -> str:  # type: igno
         # Self-modification tools
         if name == "read_code":
             filename = args.get("filename", "")
-            safe_files = {"nova_bot.py", "pc_control.py", "personalities.py", "config.py", "db.py", "skills_module.py", "dashboard.py", "ollama_client.py", "e2e_encryption.py", "exchange_module.py", "news_module.py", "run_with_dashboard.py", "requirements.txt"}  # type: ignore  # pyre-ignore
+            safe_files = {"nova_bot.py", "pc_control.py", "personalities.py", "config.py", "db.py", "skills_module.py", "dashboard.py", "ollama_client.py", "e2e_encryption.py", "exchange_module.py", "news_module.py", "run_with_dashboard.py", "requirements.txt"}
             if filename not in safe_files:
                 return f"I can only read project files: {', '.join(sorted(safe_files))}"
             try:
                 with open(filename, "r", encoding="utf-8") as f:
                     code = f.read()
-                return f"Contents of {filename}:\n\n{code[:8000]}"  # pyre-ignore
+                return f"Contents of {filename}:\n\n{code[:8000]}"
             except Exception as e:
                 return f"Could not read {filename}: {e}"
         if name == "write_code":
             filename = args.get("filename", "")
             content = args.get("content", "")
-            safe_files = {"nova_bot.py", "pc_control.py", "personalities.py", "config.py", "db.py", "skills_module.py", "dashboard.py", "ollama_client.py", "e2e_encryption.py", "exchange_module.py", "news_module.py", "run_with_dashboard.py"}  # type: ignore  # pyre-ignore
+            safe_files = {"nova_bot.py", "pc_control.py", "personalities.py", "config.py", "db.py", "skills_module.py", "dashboard.py", "ollama_client.py", "e2e_encryption.py", "exchange_module.py", "news_module.py", "run_with_dashboard.py"}
             if filename not in safe_files:
                 return f"I can only write to project files: {', '.join(sorted(safe_files))}"
             if not content:
                 return "No content provided to write."
-            import shutil  # type: ignore  # pyre-ignore
+            import shutil
             backup = filename + ".bak"
             try:
                 shutil.copy2(filename, backup)
@@ -406,14 +401,14 @@ async def execute_tool_call(tool_call: dict, user_id: int) -> str:  # type: igno
             except Exception as e:
                 return f"Could not write to {filename}: {e}"
         if name == "run_shell":
-            import subprocess  # type: ignore  # pyre-ignore
+            import subprocess
             command = args.get("command", "")
             if not command:
                 return "No command provided."
             try:
                 result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30, cwd=".")
                 output = (result.stdout or "") + (result.stderr or "")
-                return output.strip()[:2000] or "Command completed with no output."  # pyre-ignore
+                return output.strip()[:2000] or "Command completed with no output."
             except subprocess.TimeoutExpired:
                 return "Command timed out after 30 seconds."
             except Exception as e:
@@ -423,7 +418,7 @@ async def execute_tool_call(tool_call: dict, user_id: int) -> str:  # type: igno
         return "Something went wrong while running that action. I can try a safer alternative."
 
 
-def get_main_keyboard() -> InlineKeyboardMarkup:  # type: ignore  # pyre-ignore
+def get_main_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
         [InlineKeyboardButton("📸 Screenshot", callback_data="screenshot"), InlineKeyboardButton("📊 Stats", callback_data="stats")],
         [InlineKeyboardButton("⚙️ Processes", callback_data="processes"), InlineKeyboardButton("📂 Files", callback_data="files")],
@@ -434,12 +429,12 @@ def get_main_keyboard() -> InlineKeyboardMarkup:  # type: ignore  # pyre-ignore
     return InlineKeyboardMarkup(keyboard)
 
 
-async def _get_personality_key(store: ConversationStore, user_id: int) -> str:  # type: ignore  # pyre-ignore
+async def _get_personality_key(store: ConversationStore, user_id: int) -> str:
     key = await store.get_personality(user_id=user_id)
     return (key or "lily").lower()
 
 
-def _build_system_prompt(personality_key: str) -> str:  # type: ignore  # pyre-ignore
+def _build_system_prompt(personality_key: str) -> str:
     p = get_personality(personality_key)
     try:
         facts = pc_control.get_user_facts()
@@ -448,7 +443,7 @@ def _build_system_prompt(personality_key: str) -> str:  # type: ignore  # pyre-i
     return f"{p.system_prompt}\n\n{BEHAVIOR_PROMPT}\n\n{facts}\n\n{TOOL_PROMPT}".strip()
 
 
-def _extract_tool_call(text: str) -> Optional[dict]:  # type: ignore  # pyre-ignore
+def _extract_tool_call(text: str) -> Optional[dict]:
     raw = None
     # 1. Strict XML
     match = re.search(r"<tool_call>\s*(.*?)\s*</tool_call>", text, re.DOTALL | re.IGNORECASE)
@@ -466,7 +461,7 @@ def _extract_tool_call(text: str) -> Optional[dict]:  # type: ignore  # pyre-ign
                 raw = stripped
 
     if not raw:
-        return None  # type: ignore  # pyre-ignore
+        return None
 
     try:
         return json.loads(raw)
@@ -475,7 +470,7 @@ def _extract_tool_call(text: str) -> Optional[dict]:  # type: ignore  # pyre-ign
         return {"name": "__malformed__", "arguments": {"raw": raw}}
 
 
-def _safe_name(value: str, fallback: str) -> str:  # type: ignore  # pyre-ignore
+def _safe_name(value: str, fallback: str) -> str:
     cleaned = re.sub(r"[^a-zA-Z0-9._-]+", "_", (value or "").strip())
     return cleaned or fallback
 
@@ -488,7 +483,7 @@ async def _send_secure_export(
     if pyzipper is None:
         await update.effective_message.reply_text("Secure export is unavailable right now. Install pyzipper to enable encrypted ZIP export.")
         return
-    store: ConversationStore = context.application.bot_data["store"]  # type: ignore  # pyre-ignore
+    store: ConversationStore = context.application.bot_data["store"]
     chat = update.effective_chat
     user = update.effective_user
     if not chat or not user:
@@ -509,7 +504,7 @@ async def _send_secure_export(
         facts_file.write_text(json.dumps({"user_id": user.id, "facts": user_facts}, ensure_ascii=False, indent=2), encoding="utf-8")
         daily_file.write_text(activity_summary, encoding="utf-8")
 
-        archive_name = f"nova_secure_export_{user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"  # type: ignore  # pyre-ignore
+        archive_name = f"nova_secure_export_{user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
         archive_path = export_dir / archive_name
         with pyzipper.AESZipFile(archive_path, "w", compression=pyzipper.ZIP_DEFLATED, encryption=pyzipper.WZ_AES) as zf:
             zf.setpassword(password.encode("utf-8"))
@@ -525,10 +520,10 @@ async def _send_secure_export(
 async def _stream_ollama_to_message(
     *,
     client: OllamaClient,
-    messages: list[dict[str, str]],  # type: ignore  # pyre-ignore
+    messages: list[dict[str, str]],
     placeholder_message,
 ) -> str:
-    parts: list[str] = []  # type: ignore  # pyre-ignore
+    parts: list[str] = []
     last_edit = 0.0
     visible = True
 
@@ -560,22 +555,22 @@ async def _stream_ollama_to_message(
     return "".join(parts).strip()
 
 
-async def _send_text_as_file(update: Update, text: str, filename_prefix: str) -> None:  # type: ignore  # pyre-ignore
+async def _send_text_as_file(update: Update, text: str, filename_prefix: str) -> None:
     msg = update.effective_message
     if not msg:
         return
     with tempfile.NamedTemporaryFile("w", delete=False, suffix=".txt", encoding="utf-8") as f:
         f.write(text)
         tmp_path = f.name
-    filename = f"{filename_prefix}_{update.effective_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"  # type: ignore  # pyre-ignore
+    filename = f"{filename_prefix}_{update.effective_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
     await msg.reply_document(document=InputFile(tmp_path, filename=filename))
     try:
-        os.remove(tmp_path)  # type: ignore  # pyre-ignore
+        os.remove(tmp_path)
     except OSError:
         pass
 
 
-def _describe_tool_call(tool_call: dict) -> str:  # type: ignore  # pyre-ignore
+def _describe_tool_call(tool_call: dict) -> str:
     name = (tool_call.get("name") or "").strip()
     args = tool_call.get("arguments") or {}
     if not isinstance(args, dict):
@@ -602,9 +597,9 @@ async def _queue_tool_approval(
 ) -> None:
     pending = context.application.bot_data.setdefault("pending_tools", {})
     token = secrets.token_urlsafe(16)
-    pending[token] = {"user_id": user_id, "chat_id": chat_id, "tool_call": tool_call, "system_prompt": system_prompt}  # type: ignore  # pyre-ignore
+    pending[token] = {"user_id": user_id, "chat_id": chat_id, "tool_call": tool_call, "system_prompt": system_prompt}
     keyboard = InlineKeyboardMarkup(
-        [[InlineKeyboardButton("✅ Approve", callback_data=f"tool_approve:{token}"), InlineKeyboardButton("❌ Cancel", callback_data=f"tool_cancel:{token}")]]  # type: ignore  # pyre-ignore
+        [[InlineKeyboardButton("✅ Approve", callback_data=f"tool_approve:{token}"), InlineKeyboardButton("❌ Cancel", callback_data=f"tool_cancel:{token}")]]
     )
     await placeholder_message.edit_text(f"Lily wants to run:\n\n{_describe_tool_call(tool_call)}\n\nApprove?", reply_markup=keyboard)
 
@@ -618,11 +613,11 @@ async def _generate_assistant_turn(
     system_prompt: str,
     placeholder_message,
 ) -> None:
-    store: ConversationStore = context.application.bot_data["store"]  # type: ignore  # pyre-ignore
-    client: OllamaClient = context.application.bot_data["ollama"]  # type: ignore  # pyre-ignore
+    store: ConversationStore = context.application.bot_data["store"]
+    client: OllamaClient = context.application.bot_data["ollama"]
 
     recent = await store.get_recent_messages(user_id=user_id, chat_id=chat_id, limit=max(1, SETTINGS.context_messages))
-    messages = [{"role": "system", "content": system_prompt}, *recent]  # type: ignore  # pyre-ignore
+    messages = [{"role": "system", "content": system_prompt}, *recent]
     update_user_memory(str(user_id), messages)
 
     text = await _stream_ollama_to_message(client=client, messages=messages, placeholder_message=placeholder_message)
@@ -683,12 +678,12 @@ async def _generate_assistant_turn(
     await placeholder_message.edit_text(final or "...")
 
 
-async def respond_with_llm(update: Update, context: ContextTypes.DEFAULT_TYPE, user_text: str) -> None:  # type: ignore  # pyre-ignore
+async def respond_with_llm(update: Update, context: ContextTypes.DEFAULT_TYPE, user_text: str) -> None:
     if DASHBOARD_AVAILABLE and not bot_state.get("running", True):
         await update.effective_message.reply_text("💤 I'm taking a little break...")
         return
 
-    store: ConversationStore = context.application.bot_data["store"]  # type: ignore  # pyre-ignore
+    store: ConversationStore = context.application.bot_data["store"]
     chat = update.effective_chat
     user = update.effective_user
     if not chat or not user:
@@ -726,7 +721,7 @@ async def respond_with_llm(update: Update, context: ContextTypes.DEFAULT_TYPE, u
             pass
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:  # type: ignore  # pyre-ignore
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await ensure_authorized(update):
         return
     user = update.effective_user
@@ -734,37 +729,37 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:  # 
     await respond_with_llm(
         update,
         context,
-        f"[System: The user just started the bot. Greet them warmly as Lily. Use their name: {name}. Welcome them, ask how they're doing or what's on their mind. Be casual and natural, like you're happy to see them. No bullet lists. Short and friendly.]",  # type: ignore  # pyre-ignore
+        f"[System: The user just started the bot. Greet them warmly as Lily. Use their name: {name}. Welcome them, ask how they're doing or what's on their mind. Be casual and natural, like you're happy to see them. No bullet lists. Short and friendly.]",
     )
 
 
-async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:  # type: ignore  # pyre-ignore
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await ensure_authorized(update):
         return
     stats = await asyncio.to_thread(pc_control.get_system_stats, user_id=str(update.effective_user.id))
     await update.effective_message.reply_text(stats, parse_mode="Markdown")
 
 
-async def plugins_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:  # type: ignore  # pyre-ignore
+async def plugins_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await ensure_authorized(update):
         return
     if not active_plugins:
         await update.effective_message.reply_text("No plugins loaded.")
         return
-    await update.effective_message.reply_text("\n".join([f"{n}: {d}" for n, d in active_plugins.items()]))  # type: ignore  # pyre-ignore
+    await update.effective_message.reply_text("\n".join([f"{n}: {d}" for n, d in active_plugins.items()]))
 
 
-async def reload_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:  # type: ignore  # pyre-ignore
+async def reload_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await ensure_authorized(update):
         return
     load_plugins(context.application)
     await update.effective_message.reply_text("Plugins reloaded.")
 
 
-async def personality_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:  # type: ignore  # pyre-ignore
+async def personality_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await ensure_authorized(update):
         return
-    store: ConversationStore = context.application.bot_data["store"]  # type: ignore  # pyre-ignore
+    store: ConversationStore = context.application.bot_data["store"]
     if not context.args:
         await update.effective_message.reply_text(format_personality_list(), parse_mode="Markdown")
         return
@@ -776,7 +771,7 @@ async def personality_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     await update.effective_message.reply_text(f"Personality set: {get_personality(key).display_name}")
 
 
-async def export_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:  # type: ignore  # pyre-ignore
+async def export_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await ensure_authorized(update):
         return
     if not context.args:
@@ -789,7 +784,7 @@ async def export_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await _send_secure_export(update, context, password)
 
 
-async def myday_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:  # type: ignore  # pyre-ignore
+async def myday_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await ensure_authorized(update):
         return
     user = update.effective_user
@@ -803,7 +798,7 @@ async def myday_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await update.effective_message.reply_text(summary)
 
 
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:  # type: ignore  # pyre-ignore
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await ensure_authorized(update):
         return
     text = (update.effective_message.text or "").strip()
@@ -814,7 +809,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     await respond_with_llm(update, context, text)
 
 
-async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:  # type: ignore  # pyre-ignore
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await ensure_authorized(update):
         return
     voice = update.effective_message.voice
@@ -829,13 +824,13 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         result = await asyncio.to_thread(whisper_model.transcribe, file_path)
         transcription = (result.get("text") or "").strip()
         await update.effective_message.reply_text(f"Transcribed: {transcription}")
-        await respond_with_llm(update, context, f"[Voice Message Transcribed]: {transcription}")  # type: ignore  # pyre-ignore
+        await respond_with_llm(update, context, f"[Voice Message Transcribed]: {transcription}")
     finally:
         if os.path.exists(file_path):
-            os.remove(file_path)  # type: ignore  # pyre-ignore
+            os.remove(file_path)
 
 
-async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:  # type: ignore  # pyre-ignore
+async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await ensure_authorized(update):
         return
     doc = update.effective_message.document
@@ -851,25 +846,25 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         else:
             content = f"Binary or unsupported file type: {doc.file_name}"
         content_str: str = str(content)
-        await respond_with_llm(update, context, f"Summarize file {doc.file_name}:\n\n{content_str[:2000]}")  # type: ignore  # pyre-ignore
+        await respond_with_llm(update, context, f"Summarize file {doc.file_name}:\n\n{content_str[:2000]}")
     finally:
         if os.path.exists(file_path):
-            os.remove(file_path)  # type: ignore  # pyre-ignore
+            os.remove(file_path)
 
 
-async def send_reminder(chat_id: int, user_name: str, task: str) -> None:  # type: ignore  # pyre-ignore
+async def send_reminder(chat_id: int, user_name: str, task: str) -> None:
     if bot_instance:
         await bot_instance.send_message(chat_id=chat_id, text=f"Reminder for {user_name}: {task}")
 
 
-async def handle_reminder_request(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str) -> None:  # type: ignore  # pyre-ignore
+async def handle_reminder_request(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str) -> None:
     global bot_instance
     bot_instance = context.bot
     try:
         parts = text.lower().split("remind me in")[1].strip().split(" ")
         minutes = int(parts[0])
-        parts_list: list[str] = list(parts)  # type: ignore  # pyre-ignore
-        task = " ".join(parts_list[2:]).replace("to ", "", 1).replace("that ", "", 1).strip() or "Your task"  # type: ignore  # pyre-ignore
+        parts_list: list[str] = list(parts)
+        task = " ".join(parts_list[2:]).replace("to ", "", 1).replace("that ", "", 1).strip() or "Your task"
         run_time = datetime.now() + timedelta(minutes=minutes)
         scheduler.add_job(
             send_reminder,
@@ -882,7 +877,7 @@ async def handle_reminder_request(update: Update, context: ContextTypes.DEFAULT_
         await update.effective_message.reply_text("Couldn't parse that. Try: 'remind me in 10 minutes to ...'")
 
 
-async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:  # type: ignore  # pyre-ignore
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await ensure_authorized(update):
         return
 
@@ -898,18 +893,18 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if not data:
             await query.edit_message_text("Expired.")
             return
-        if data["user_id"] != user_id or data["chat_id"] != chat_id:  # type: ignore  # pyre-ignore
+        if data["user_id"] != user_id or data["chat_id"] != chat_id:
             await query.edit_message_text("Unauthorized.")
             return
         if action == "tool_cancel":
-            store: ConversationStore = context.application.bot_data["store"]  # type: ignore  # pyre-ignore
+            store: ConversationStore = context.application.bot_data["store"]
             cancel_msg = "Tool execution was cancelled by the user."
             await store.add_message(user_id=user_id, chat_id=chat_id, role="user", content=cancel_msg)
             log_conversation(str(user_id), "user", cancel_msg)
             await query.edit_message_text("Cancelled.")
             return
 
-        store: ConversationStore = context.application.bot_data["store"]  # type: ignore  # pyre-ignore
+        store: ConversationStore = context.application.bot_data["store"]
         system_prompt = data["system_prompt"]
         tool_call = data["tool_call"]
 
@@ -938,7 +933,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             with open(filename, "rb") as f:
                 await query.message.reply_photo(photo=f, caption="Screenshot captured.")
             try:
-                os.remove(filename)  # type: ignore  # pyre-ignore
+                os.remove(filename)
             except OSError:
                 pass
         else:
@@ -963,7 +958,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if query.data == "clipboard_menu":
         clipboard_text = await asyncio.to_thread(pc_control.get_clipboard, user_id=str(user_id))
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("Refresh", callback_data="clipboard_menu")]])
-        await query.edit_message_text(f"Clipboard:\n\n{(clipboard_text or '')[:500]}", reply_markup=keyboard)  # type: ignore  # pyre-ignore
+        await query.edit_message_text(f"Clipboard:\n\n{(clipboard_text or '')[:500]}", reply_markup=keyboard)
         return
 
     if query.data == "open_app_prompt":
@@ -979,7 +974,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     if query.data == "reset":
-        store: ConversationStore = context.application.bot_data["store"]  # type: ignore  # pyre-ignore
+        store: ConversationStore = context.application.bot_data["store"]
         await store.clear_history(user_id=user_id, chat_id=chat_id)
         await query.edit_message_text("Memory cleared.", reply_markup=get_main_keyboard())
         return
@@ -989,7 +984,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
 
-async def _post_init(application: Application) -> None:  # type: ignore  # pyre-ignore
+async def _post_init(application: Application) -> None:
     global bot_instance
     store = ConversationStore(SETTINGS.sqlite_path)
     await store.open()
@@ -1003,22 +998,22 @@ async def _post_init(application: Application) -> None:  # type: ignore  # pyre-
     scheduler.start()
 
 
-async def _post_shutdown(application: Application) -> None:  # type: ignore  # pyre-ignore
+async def _post_shutdown(application: Application) -> None:
     try:
         scheduler.shutdown(wait=False)
     except Exception:
         pass
 
-    store: Optional[ConversationStore] = application.bot_data.get("store")  # type: ignore  # pyre-ignore
+    store: Optional[ConversationStore] = application.bot_data.get("store")
     if store:
-        await store.close()  # type: ignore  # pyre-ignore
+        await store.close()
 
-    session: Optional[aiohttp.ClientSession] = application.bot_data.get("http_session")  # type: ignore  # pyre-ignore
+    session: Optional[aiohttp.ClientSession] = application.bot_data.get("http_session")
     if session:
-        await session.close()  # type: ignore  # pyre-ignore
+        await session.close()
 
 
-def main() -> None:  # type: ignore  # pyre-ignore
+def main() -> None:
     if not SETTINGS.telegram_bot_token:
         logger.error("No TELEGRAM_BOT_TOKEN configured.")
         return
