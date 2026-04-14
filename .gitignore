@@ -1,38 +1,37 @@
 ```
-# Environment variables
+# Environment files
 .env
 .env.local
 .env.*
 
-# Dependencies
-venv/
-.venv/
+# Database files
+*.sqlite3-shm
+*.sqlite3-wal
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Python specific
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.Python
+env/
+venv/
+.venv/
+.ENV
+.python-version
+.pytest_cache/
+.mypy_cache/
 
-# Build artifacts
-build/
-dist/
-*.egg-info/
-
-# Logs
-*.log
-
-# Editor/IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*.tmp
-
-# Coverage
-.coverage
-coverage/
-htmlcov/
-
-# OS
+# System files
 .DS_Store
 Thumbs.db
+
+# Backup files
+*~
+*.bak
+*.swp
 ```

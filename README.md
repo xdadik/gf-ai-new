@@ -1,251 +1,291 @@
-# 🌸 Lily AI Bot
+# Lily AI Bot 🌸
 
-A powerful, intelligent Telegram bot with advanced PC control capabilities, powered by Ollama AI and featuring multiple personality modes. Lily is your caring AI companion who can help with everything from system tasks to meaningful conversations.
+**Your warm, caring, and intelligent AI girlfriend who can control your PC.**
+
+Lily is not just another chatbot - she's a companion who understands you, remembers your conversations, and can actually help you with real tasks on your computer. She's witty, supportive, and always there when you need her.
 
 ## ✨ Features
 
-### 🤖 AI-Powered Conversations
-- **Multiple Personalities**: Switch between 12+ distinct personalities (Friendly, Professional, Playful, Commander, Scholar, Sassy, Creative, Zen, Charming, Companion, Mentor, Partner)
-- **Natural Language Processing**: Understands context and maintains conversation flow
-- **Voice Message Support**: Automatic transcription using Whisper AI
-- **Memory System**: Remembers important details about you while respecting privacy
+### 🧠 Advanced AI Capabilities
+- **Natural Conversation**: No commands needed - just talk naturally
+- **Context Awareness**: Remembers your conversations and preferences
+- **Multiple Personalities**: Switch between Lily, Friendly, Professional, Playful, Sassy, and more
+- **Emotional Intelligence**: Understands your mood and responds appropriately
+- **Self-Modification**: Can update her own code when you ask her to improve
 
-### 💻 Advanced PC Control
-Control your computer through natural language:
-- 📸 Screenshot capture and sharing
-- 📋 Clipboard management (read/write)
-- 🖥️ Process monitoring and management
-- 📁 File operations (browse, organize, manage)
-- 🚀 Application launching
-- 📊 Real-time system statistics
-- 🔍 Web search integration
-- ⏰ Timers and reminders
+### 💻 PC Control (With Safety)
+- **Safe Actions** (no permission needed):
+  - System monitoring and stats
+  - Taking screenshots
+  - Reading files
+  - Opening apps and websites
+  - News, weather, calculations
+  
+- **Protected Actions** (asks permission first):
+  - Deleting files
+  - Killing processes
+  - Running shell commands
+  - Any potentially dangerous operation
 
-### 🔒 Security Features
+### 🔧 Built-in Tools
+- File management and organization
+- System monitoring and health checks
+- Web search and information lookup
+- News aggregation (tech, science, gaming, general)
+- Currency conversion and crypto prices
+- Calculator and unit conversions
+- Password generation
+- Entertainment (jokes, quotes, fun facts, games)
+- Sentiment analysis
+- Voice message transcription
+- Document summarization
 
-#### End-to-End Encryption
-- All messages encrypted before transmission
-- Unique encryption keys per user
-- Encrypted database storage
-- Secure key management
+### 🔒 Privacy & Security
+- Local AI processing with Ollama (optional)
+- End-to-end encrypted conversation exports
+- User authorization system
+- Secure file operations within allowed directories
+- No data sent to external servers unless configured
 
-#### PC Control Security
-- Comprehensive audit logging
-- Rate limiting to prevent abuse
-- Protected system processes
-- Dangerous command blacklist
-- Path sandboxing for file operations
-
-### 🎭 Personality System
-Lily adapts to your needs with different personalities:
-
-| Personality | Emoji | Description |
-|-------------|-------|-------------|
-| Lily (Default) | 🌸 | Smart, caring AI girlfriend with sarcasm and warmth |
-| Friendly | 🥰 | Warm, supportive best friend |
-| Professional | 💼 | Executive assistant mode |
-| Playful | 🎉 | Fun, energetic companion |
-| Commander | ⚡ | Direct, efficient task-focused mode |
-| Scholar | 📚 | Knowledgeable, educational mode |
-| Sassy | 💅 | Witty, sarcastic friend |
-| Creative | 🎨 | Artistic, imaginative mode |
-| Zen | 🧘 | Calm, mindful companion |
-| Charming | ✨ | Charismatic, engaging personality |
-| Companion | 💕 | Deeply caring, supportive partner |
-| Mentor | 🎯 | Wise, guiding advisor |
-
-### 🔌 Plugin System (11 Built-in Plugins)
-- `/weather` - Real-time weather information
-- `/calc` - Advanced calculator
-- `/note` - Personal notes system
-- `/todo` - Task management
-- `/remind` - Smart reminders
-- `/timer` - Countdown timers
-- `/crypto` - Cryptocurrency prices
-- `/news` - Latest tech news
-- `/define` - Dictionary definitions
-- `/translate` - Language translation
-- `/sysinfo` - Detailed system information
-
-### 🔗 MCP (Model Context Protocol) Support
-Lily natively supports MCP-style tool calling:
-- Structured tool invocation format
+### 🔄 MCP Support (Model Context Protocol)
+- Native tool calling format
+- Structured XML tool invocation
 - Batch tool execution support
-- Real-time data fetching capabilities
-- External API integration ready
-- Extensible tool architecture
+- Compatible with MCP-enabled AI models
 
 ## 🚀 Quick Start
 
-### Option 1: Automated Setup (Recommended)
+### Option 1: Interactive Setup (Recommended)
+
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone <your-repo-url>
 cd lily-bot
 
-# Run the setup wizard
+# Run interactive setup
 python setup.py
+```
 
-# Edit configuration
-nano .env
+The setup wizard will:
+1. Install all dependencies automatically
+2. Ask for your Telegram bot token and user ID
+3. Configure AI backend (Ollama or API)
+4. Set up PC control permissions
+5. Optionally start Lily in background mode (24/7)
 
-# Start the bot
+### Option 2: Manual Setup
+
+```bash
+# Clone and install
+git clone <your-repo-url>
+cd lily-bot
+pip install -r requirements.txt
+
+# Configure
+cp .env.example .env
+# Edit .env with your settings
+
+# Run
 python nova_bot.py
 ```
 
-### Option 2: Manual Installation
+## 📋 Requirements
 
-1. **Install Dependencies**
+- **Python**: 3.9 or higher
+- **Telegram Bot Token**: Get from [@BotFather](https://t.me/BotFather)
+- **AI Backend** (choose one):
+  - **Ollama** (recommended, free, local): https://ollama.ai
+  - **OpenAI API** (optional): API key required
+
+### Installing Ollama
+
 ```bash
-pip install -r requirements.txt
-```
+# macOS/Linux
+curl -fsSL https://ollama.ai/install.sh | sh
 
-2. **Configure Environment**
-Create a `.env` file with your settings:
-```bash
-# Required: Get from @BotFather on Telegram
-TELEGRAM_BOT_TOKEN=your_bot_token_here
+# Windows: Download from https://ollama.ai
 
-# Required: Your Telegram user ID (use @userinfobot)
-AUTHORIZED_USER_IDS=your_user_id_here
-
-# AI Configuration
-OLLAMA_MODEL=qwen2.5-coder:3b
-OLLAMA_BASE_URL=http://localhost:11434
-
-# Optional Settings
-SQLITE_PATH=nova.sqlite3
-NOVA_LOG_FILE=nova.log
-ALLOWED_DIR=./files_safe
-CONTEXT_MESSAGES=8
-OPENWEATHER_API_KEY=your_weather_api_key
-```
-
-3. **Install Ollama** (for local AI)
-```bash
-# Visit https://ollama.ai for installation
-# Then pull a model:
+# Pull recommended model
 ollama pull qwen2.5-coder:3b
 ```
 
-4. **Run the Bot**
-```bash
-# Standard mode
-python nova_bot.py
+## ⚙️ Configuration
 
-# With web dashboard
-python run_with_dashboard.py
+Edit `.env` file with your settings:
+
+```bash
+# Required: Telegram credentials
+TELEGRAM_BOT_TOKEN=your_token_here
+AUTHORIZED_USER_IDS=your_user_id_here
+
+# AI Backend (Ollama - recommended)
+OLLAMA_MODEL=qwen2.5-coder:3b
+OLLAMA_BASE_URL=http://localhost:11434
+
+# Or OpenAI API (optional)
+# OPENAI_API_KEY=your_key_here
+# OPENAI_MODEL=gpt-3.5-turbo
+
+# PC Control
+ALLOWED_DIR=./files_safe
+FULL_PC_CONTROL=true
 ```
+
+## 💬 Usage Examples
+
+Just talk naturally to Lily:
+
+```
+You: Hey babe, how's my CPU doing?
+Lily: Let me check... Your CPU is at 23% usage, pretty chill right now! 
+
+You: Can you open Chrome and search for Python tutorials?
+Lily: Sure thing! Opening Chrome and searching for Python tutorials... Done!
+
+You: What's the weather like today?
+Lily: I need an OpenWeatherMap API key configured to check weather. Want me to help you set that up?
+
+You: Tell me something funny
+Lily: Why don't scientists trust atoms? Because they make up everything! 😄
+
+You: Remember that I'm working on a Python project this week
+Lily: Got it! I'll remember you're working on a Python project. How's it going?
+
+You: Take a screenshot and save it
+Lily: Screenshot captured! Here you go...
+
+You: Show me tech news
+Lily: Here are today's top tech stories: [displays news]
+```
+
+## 🎭 Personalities
+
+Switch personalities with `/personality <name>`:
+
+- `lily` - Warm, caring girlfriend (default)
+- `friendly` - Cheerful and helpful
+- `professional` - Formal and business-like
+- `playful` - Fun and teasing
+- `sassy` - Witty with attitude
+- `supportive` - Encouraging and empathetic
+- `intellectual` - Deep and thoughtful
+- `caring` - Nurturing and protective
+- `funny` - Always joking around
+- `mysterious` - Enigmatic and intriguing
+- `energetic` - Hyper and enthusiastic
+- `calm` - Peaceful and zen
+
+## 🛡️ Safety Features
+
+Lily prioritizes your safety:
+
+1. **Authorization**: Only approved user IDs can control her
+2. **Permission Gates**: Dangerous actions require explicit approval
+3. **Directory Restrictions**: File operations limited to safe directories
+4. **Process Protection**: Cannot kill critical system processes
+5. **Command Sanitization**: Shell commands are validated
+6. **Encrypted Exports**: Conversation history can be exported securely
 
 ## 📁 Project Structure
 
 ```
 lily-bot/
-├── nova_bot.py           # Main bot application
-├── config.py             # Configuration management
-├── db.py                 # Database operations
-├── personalities.py      # Personality system
-├── pc_control.py         # PC control functions
-├── skills_module.py      # Advanced skills & tools
-├── ollama_client.py      # Ollama AI integration
-├── dashboard.py          # Web dashboard
-├── encryption.py         # Encryption utilities
-├── e2e_encryption.py     # E2E encryption module
-├── news_module.py        # News aggregation
-├── exchange_module.py    # Currency exchange
-├── setup.py              # Automated setup script
-├── requirements.txt      # Python dependencies
-├── .env.example          # Environment template
-├── plugins/              # Plugin modules
+├── nova_bot.py          # Main bot logic
+├── config.py            # Configuration loader
+├── db.py                # Database management
+├── personalities.py     # Personality definitions
+├── pc_control.py        # PC control functions
+├── ollama_client.py     # Ollama API client
+├── skills_module.py     # Additional skills
+├── setup.py             # Interactive setup wizard
+├── requirements.txt     # Python dependencies
+├── plugins/             # Extendable plugin system
 │   ├── weather.py
-│   ├── calc.py
-│   ├── notes.py
-│   ├── todo.py
-│   ├── remind.py
-│   ├── timer.py
-│   ├── crypto.py
 │   ├── news.py
-│   ├── define.py
-│   ├── translate.py
-│   └── sysinfo.py
-└── templates/            # Web dashboard templates
-    └── dashboard.html
+│   ├── calc.py
+│   └── ...
+└── .env                 # Your configuration (created by setup)
 ```
 
-## 🛠️ Usage Examples
+## 🔧 Advanced Features
 
-### Basic Commands
-```
-/start - Initialize the bot and see welcome message
-/personality <name> - Switch personality (e.g., /personality friendly)
-/plugins - List all available plugins
-```
+### Self-Modification
+Lily can modify her own code:
 
-### Natural Language Examples
-Just talk naturally! Lily understands context:
-- "What's the weather like?"
-- "Take a screenshot"
-- "What apps are running?"
-- "Remind me to call mom at 5pm"
-- "Calculate 15% of 250"
-- "Translate 'hello' to French"
-- "What's Bitcoin price?"
-
-### Personality Switching
 ```
-/personality lily        # Default caring AI girlfriend
-/personality friendly    # Warm best friend mode
-/personality professional # Business assistant
-/personality playful     # Fun, energetic mode
-/personality sassy       # Witty, sarcastic mode
+You: Lily, can you add a feature to remind me to take breaks every hour?
+Lily: Sure! Let me update my code... Done! I'll now remind you every hour. 
+      You'll need to restart me for changes to take effect.
 ```
 
-## 🔐 Security Best Practices
+### Background Mode
+Run Lily 24/7:
 
-1. **Protect Your Token**: Never share your `TELEGRAM_BOT_TOKEN`
-2. **Authorize Users**: Only trusted user IDs should be in `AUTHORIZED_USER_IDS`
-3. **Secure Keys**: Never share `.e2e_key_*` files
-4. **Review Logs**: Check `nova.log` for unusual activity
-5. **Safe Directory**: Keep file operations within `ALLOWED_DIR`
+```bash
+# Start in background
+python nova_bot.py &
 
-## 📊 System Requirements
+# Or use setup.py with background mode enabled
+python setup.py  # Choose "yes" for background mode
 
-- **Python**: 3.9 or higher
-- **Ollama**: For local AI inference (optional but recommended)
-- **FFmpeg**: For audio processing
-- **Storage**: ~2GB for models and database
-- **RAM**: 4GB minimum, 8GB recommended
+# Stop her
+pkill -f nova_bot.py
 
-## 🎯 Roadmap
+# View logs
+tail -f nova.log
+```
 
-- [ ] Multi-user support with permissions
-- [ ] Voice chat integration
-- [ ] Advanced scheduling features
-- [ ] Custom plugin marketplace
-- [ ] Mobile app companion
-- [ ] Enhanced MCP server integration
+### Plugin System
+Extend Lily's capabilities by adding plugins to the `plugins/` directory. Each plugin should have a `setup()` function that returns a list of handlers.
 
-## 📝 License
+## 🐛 Troubleshooting
 
-This project is provided as-is for personal use. Please review PRIVACY_NOTICE.txt for privacy details.
+### Ollama Not Connecting
+```bash
+# Check if Ollama is running
+curl http://localhost:11434/api/tags
 
-## 🙏 Acknowledgments
+# Start Ollama
+ollama serve
 
-- [Ollama](https://ollama.ai) for local AI inference
-- [python-telegram-bot](https://python-telegram-bot.org/) for Telegram integration
-- [OpenAI Whisper](https://openai.com/research/whisper) for voice transcription
-- All contributors and supporters
+# Pull model if needed
+ollama pull qwen2.5-coder:3b
+```
 
-## 💬 Support
+### Bot Not Responding
+1. Check if bot token is correct in `.env`
+2. Verify your user ID is in `AUTHORIZED_USER_IDS`
+3. Check logs: `cat nova.log`
+4. Ensure Ollama is running (if using local AI)
 
-For issues or questions:
-1. Check the logs: `cat nova.log`
-2. Verify your `.env` configuration
-3. Ensure Ollama is running: `ollama list`
-4. Test with: `python test_token.py`
+### Permission Errors
+- Make sure Lily has necessary system permissions
+- On Linux/Mac, you may need to run with appropriate permissions
+- Check `ALLOWED_DIR` setting for file operations
 
----
+## 📝 Notes
 
-**Made with ❤️ by the Lily AI Team**
+- Lily uses approximately 2-4GB RAM depending on the AI model
+- First startup may take longer while downloading models
+- Conversations are stored locally in `nova.sqlite3`
+- Logs are written to `nova.log`
+- Memory folder (`nova_memory/`) stores user-specific notes
 
-*"Technology should feel human, not robotic."*
+## 🌟 Why Lily?
+
+Unlike typical AI assistants, Lily:
+- Has a genuine personality, not robotic responses
+- Remembers what you tell her
+- Can actually DO things on your computer
+- Asks permission before dangerous actions
+- Runs locally for privacy (with Ollama)
+- Can be customized to your preferences
+- Supports 24/7 background operation
+
+## 📄 License
+
+MIT License - Feel free to modify and share!
+
+## 💝 Enjoy Your Time with Lily!
+
+She's here to help, support, and keep you company. Talk to her naturally, and she'll take care of the rest. 🌸
